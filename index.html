@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>台灣各地區PM2.5資料</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4-4.1.1/dt-1.10.21/datatables.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.css">
+  <script src="jquery-3.5.1.min.js"></script>
+  <script type="text/javascript" src="https://cdn.datatables.net/v/bs4-4.1.1/dt-1.10.21/datatables.min.js"></script>
+  <script src="particles.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.min.js"></script>
+
+  <style>
+    html{
+      height:100%;
+    }
+    body{
+      height: 100%;
+      background-color: rgb(59, 52, 44);
+      color:#fff;
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+
+    #particles-js{
+      z-index: -1;
+      position: absolute;
+      left:0;
+      top:0;
+      height: 100%;
+      width: 100%;
+      pointer-events: none;
+    }
+
+    .data{
+      width:50%;
+      height:100vh;
+      overflow: scroll;
+    }
+
+    .data::-webkit-scrollbar {
+       display: none;
+      }
+
+    .pic{
+      width: 45%;  
+    }
+
+    .pic canvas{
+      color:#fff;
+    }
+
+
+  </style>
+</head>
+
+
+
+<body class="px-3 mx-3 d-flex justify-content-center align-items-center">
+  <div class="pic"><h3 class="text-center">台灣縣市PM2.5總量面積</h3><canvas id="myChart" width="3" height="2"></canvas></div>
+  <div class="data">
+    <h1 class="text-center mb-3 mt-4">台灣各地區細懸浮微粒資料(PM2.5)</h1>
+    <table id="myTable" class="table">
+      <thead>
+        <th>縣市</th>
+        <th>地區</th>
+        <th>PM2.5</th>
+        <th>UpdateTime</th>
+      </thead>
+      <tbody>
+      </tbody>
+    </table>
+  </div>
+  
+</body>
+<div id="particles-js"></div>
+
+
+<script>
+
+particlesJS.load('particles-js', 'particlesjs-config.json', function() {
+    console.log('callback - particles.js config loaded')});
+
+  let data;
+  $.getJSON("https://data.epa.gov.tw/api/v1/aqx_p_02?limit=1000&api_key=9be7b239-557b-4c10-9775-78cadfc555e9&format=json").done(function (res) {
+    data = res.records;
+
+    let county = new Array();
+    //  console.log(res);
+    for (let i = 0; i < data.length; i++) {
+      let str = `
+        <tr>
+          <td>${data[i].county}</td>
+          <td>${data[i].Site}</td>
+          <td>${data[i].PM25}</td>
+          <td>${data[i].DataCreationDate}</td>
+        </tr>
+        `;
+      $("tbody").append(str);
+      county.push(data[i].county);
+    }
+    $('#myTable').DataTable();
+
+    let pm25total = {};
+    let pm25;
+    for (let i =0; i <data.length ; i++){
+      let tmp = data[i].county;
+      if(data[i].PM25 == ""){
+        pm25=0;
+      }else{
+        pm25 = parseInt(data[i].PM25);
+      }
+      if(pm25total.hasOwnProperty(tmp)){
+         pm25total[tmp] += pm25 ; 
+      }else{
+          pm25total[tmp] = pm25 ; 
+      }
+    }
+    let key = Object.keys(pm25total);
+    let values =  Object.values(pm25total);
+    let rgb = new Array();
+    let str = "";
+    for (let i= 1; i <= key.length ; i++){
+      let r  = Math.floor(Math.random()*256) ,  g = Math.floor(Math.random()*256) ,  b  = Math.floor(Math.random()*256)
+      str = `rgb(${r},${g},${b})`;
+      rgb.push(str);
+    }
+    Chart.defaults.global.defaultFontColor = 'white';
+   
+    let copy = values.slice(0,values.length);
+    let max = Math.max.apply(null,copy);
+    let min = Math.min.apply(null,copy);
+    var ctx = document.getElementById('myChart').getContext('2d');
+    var myChart = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: key,
+        datasets: [{
+          label: '# of Votes',
+          data: values,
+          backgroundColor:rgb,
+          borderColor: rgb,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        scales: {
+          yAxes: [{
+            ticks: {
+              beginAtZero: false,
+              max:max,
+              min:min
+            },
+            gridLines:{
+                color:"rgba(255,255,255,0.3)"
+             }
+          }]
+        },
+
+      }
+    });
+
+  }).fail(
+    function () {
+      console.log("no");
+    });
+</script>
+
+
+</html>
